@@ -26,14 +26,17 @@ const NewTransfer = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [whatsappLink, setWhatsappLink] = useState<string | null>(null);
   const [form, setForm] = useState({
     recipientName: "",
     recipientEmail: "",
+    recipientPhone: "",
     recipientCountry: "",
     sendAmount: "",
     sendCurrency: "EUR",
     receiveCurrency: "USD",
     paymentMethod: "bank_transfer",
+    notifyMethod: "email" as "email" | "whatsapp" | "both",
   });
 
   const exchangeRate = rates[form.sendCurrency]?.[form.receiveCurrency] ?? 1;
