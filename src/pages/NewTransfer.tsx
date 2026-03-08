@@ -199,15 +199,44 @@ const NewTransfer = () => {
                   required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label>Email (optional)</Label>
-                <Input
-                  type="email"
-                  value={form.recipientEmail}
-                  onChange={(e) => update("recipientEmail", e.target.value)}
-                  placeholder="recipient@email.com"
-                />
+                <Label>Notification Method</Label>
+                <Tabs value={form.notifyMethod} onValueChange={(v) => update("notifyMethod", v)} className="w-full">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="email" className="flex-1">Email</TabsTrigger>
+                    <TabsTrigger value="whatsapp" className="flex-1">WhatsApp</TabsTrigger>
+                    <TabsTrigger value="both" className="flex-1">Both</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
+
+              {(form.notifyMethod === "email" || form.notifyMethod === "both") && (
+                <div className="space-y-2">
+                  <Label>Recipient Email</Label>
+                  <Input
+                    type="email"
+                    value={form.recipientEmail}
+                    onChange={(e) => update("recipientEmail", e.target.value)}
+                    placeholder="recipient@email.com"
+                    required={form.notifyMethod === "email"}
+                  />
+                </div>
+              )}
+
+              {(form.notifyMethod === "whatsapp" || form.notifyMethod === "both") && (
+                <div className="space-y-2">
+                  <Label>Recipient Phone (with country code)</Label>
+                  <Input
+                    type="tel"
+                    value={form.recipientPhone}
+                    onChange={(e) => update("recipientPhone", e.target.value)}
+                    placeholder="+1234567890"
+                    required={form.notifyMethod === "whatsapp"}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Country</Label>
                 <Select value={form.recipientCountry} onValueChange={(v) => update("recipientCountry", v)}>
@@ -231,10 +260,30 @@ const NewTransfer = () => {
             </CardContent>
           </Card>
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Processing..." : "Send Transfer"}
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
+          {whatsappLink ? (
+            <div className="space-y-3">
+              <Button asChild size="lg" className="w-full bg-[#25D366] hover:bg-[#20BD5A] text-white">
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-2 w-5 h-5" />
+                  Send WhatsApp Notification
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={() => navigate(`/transactions`)}
+              >
+                Skip & View Transactions
+              </Button>
+            </div>
+          ) : (
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              {loading ? "Processing..." : "Send Transfer"}
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          )}
         </form>
       </div>
     </AppLayout>
