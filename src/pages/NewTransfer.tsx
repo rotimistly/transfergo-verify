@@ -64,6 +64,16 @@ const NewTransfer = () => {
       }).select().single();
 
       if (error) throw error;
+
+      // Send notification to recipient
+      try {
+        await supabase.functions.invoke("send-transfer-notification", {
+          body: { transactionId: data.id },
+        });
+      } catch (notifErr) {
+        console.error("Notification error:", notifErr);
+      }
+
       toast.success("Transfer created successfully!");
       navigate(`/transactions/${data.id}`);
     } catch (error: any) {
