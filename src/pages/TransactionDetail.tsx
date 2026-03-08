@@ -63,6 +63,37 @@ const TransactionDetail = () => {
     }
   };
 
+  const approveFunds = async () => {
+    if (!tx || !user) return;
+    const { error } = await supabase
+      .from("transactions")
+      .update({ verification_status: "verified", status: "completed" })
+      .eq("id", tx.id);
+
+    if (error) {
+      toast.error("Failed to approve funds");
+      return;
+    }
+
+    await supabase.from("verification_logs").insert({
+      transaction_id: tx.id,
+      user_id: user.id,
+      action: "approved",
+      notes: "Funds approved from transaction detail",
+    });
+    setTx({ ...tx, verification_status: "verified", status: "completed" });
+    toast.success("Funds approved successfully!");
+  };
+
+  const generateWhatsAppLink = () => {
+    if (!tx?.recipient_phone) return "";
+    const phone = tx.recipient_phone.replace(/[^0-9]/g, "");
+    const message = encodeURIComponent(
+      `Dear ${tx.recipient_name},\n\nGreat news! A transfer of ${tx.receive_amount} ${tx.receive_currency} has been sent to you.\n\nTransaction Reference: ${tx.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+    );
+    return `https://wa.me/${phone}?text=${message}`;
+  };
+
   if (!tx) {
     return (
       <AppLayout>
