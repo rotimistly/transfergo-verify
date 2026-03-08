@@ -10,6 +10,7 @@ import NewTransfer from "./pages/NewTransfer";
 import Transactions from "./pages/Transactions";
 import TransactionDetail from "./pages/TransactionDetail";
 import Verification from "./pages/Verification";
+import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
             <Route path="/transactions/:id" element={<ProtectedRoute><TransactionDetail /></ProtectedRoute>} />
             <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+            <Route path="/confirm" element={<EmailConfirmed />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
