@@ -84,6 +84,58 @@ const Notifications = () => {
       setLoading(false);
     };
     fetchNotifications();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transfer_notifications",
+        },
+        async (payload) => {
+          const newNotif = payload.new as any;
+          // Enrich with transaction data
+          const { data: tx } = await supabase
+            .from("transactions")
+            .select("id, status, verification_status, reference_number, recipient_phone, receive_amount, receive_currency")
+            .eq("id", newNotif.transaction_id)
+            .single();
+
+          const enriched: NotificationWithTx = {
+            ...newNotif,
+            tx_status: tx?.status || "unknown",
+            tx_verification_status: tx?.verification_status || "unverified",
+            tx_reference: tx?.reference_number || "",
+            recipient_phone: tx?.recipient_phone || null,
+            receive_amount: tx?.receive_amount,
+            receive_currency: tx?.receive_currency,
+          };
+
+          setNotifications((prev) => [enriched, ...prev]);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "transfer_notifications",
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const markAsRead = async (id: string) => {
