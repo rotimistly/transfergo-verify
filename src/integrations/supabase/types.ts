@@ -119,6 +119,56 @@ export type Database = {
         }
         Relationships: []
       }
+      transfer_notifications: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          email_sent: boolean
+          id: string
+          message: string | null
+          recipient_email: string
+          recipient_name: string
+          sender_name: string
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          email_sent?: boolean
+          id?: string
+          message?: string | null
+          recipient_email: string
+          recipient_name: string
+          sender_name: string
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          email_sent?: boolean
+          id?: string
+          message?: string | null
+          recipient_email?: string
+          recipient_name?: string
+          sender_name?: string
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_notifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_logs: {
         Row: {
           action: string
