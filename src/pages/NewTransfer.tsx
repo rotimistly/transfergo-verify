@@ -12,15 +12,7 @@ import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowRight, ArrowDownUp, MessageCircle } from "lucide-react";
 
-const currencies = ["EUR", "USD", "GBP", "PLN", "TRY", "INR", "PHP", "UAH"];
-const countries = ["United States", "United Kingdom", "Poland", "Turkey", "India", "Philippines", "Ukraine", "Germany", "France"];
-
-// Mock exchange rates
-const rates: Record<string, Record<string, number>> = {
-  EUR: { USD: 1.08, GBP: 0.86, PLN: 4.32, TRY: 32.1, INR: 90.2, PHP: 61.5, UAH: 40.2, EUR: 1 },
-  USD: { EUR: 0.93, GBP: 0.79, PLN: 4.0, TRY: 29.7, INR: 83.5, PHP: 56.9, UAH: 37.2, USD: 1 },
-  GBP: { EUR: 1.16, USD: 1.26, PLN: 5.02, TRY: 37.3, INR: 105.0, PHP: 71.8, UAH: 46.8, GBP: 1 },
-};
+import { currencies, countries, getExchangeRate } from "@/lib/constants";
 
 const NewTransfer = () => {
   const { user } = useAuth();
