@@ -14,7 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          kyc_status: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          kyc_status?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          kyc_status?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          created_at: string
+          exchange_rate: number
+          fee: number
+          id: string
+          payment_method: string
+          receive_amount: number
+          receive_currency: string
+          recipient_country: string
+          recipient_email: string | null
+          recipient_name: string
+          reference_number: string
+          send_amount: number
+          send_currency: string
+          sender_name: string
+          status: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+          verification_notes: string | null
+          verification_status: string
+        }
+        Insert: {
+          created_at?: string
+          exchange_rate: number
+          fee?: number
+          id?: string
+          payment_method?: string
+          receive_amount: number
+          receive_currency?: string
+          recipient_country: string
+          recipient_email?: string | null
+          recipient_name: string
+          reference_number?: string
+          send_amount: number
+          send_currency?: string
+          sender_name: string
+          status?: string
+          total_amount: number
+          updated_at?: string
+          user_id: string
+          verification_notes?: string | null
+          verification_status?: string
+        }
+        Update: {
+          created_at?: string
+          exchange_rate?: number
+          fee?: number
+          id?: string
+          payment_method?: string
+          receive_amount?: number
+          receive_currency?: string
+          recipient_country?: string
+          recipient_email?: string | null
+          recipient_name?: string
+          reference_number?: string
+          send_amount?: number
+          send_currency?: string
+          sender_name?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          verification_notes?: string | null
+          verification_status?: string
+        }
+        Relationships: []
+      }
+      verification_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          notes: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_logs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
