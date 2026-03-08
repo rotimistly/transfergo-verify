@@ -170,6 +170,15 @@ const TransactionDetail = () => {
                   <span className="font-medium">{tx.recipient_email}</span>
                 </div>
               )}
+              {tx.recipient_phone && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="font-medium flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5" />
+                    {tx.recipient_phone}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Country</span>
                 <span className="font-medium">{tx.recipient_country}</span>
@@ -178,6 +187,23 @@ const TransactionDetail = () => {
                 <span className="text-muted-foreground">Payment Method</span>
                 <span className="font-medium capitalize">{tx.payment_method.replace("_", " ")}</span>
               </div>
+
+              {/* WhatsApp resend */}
+              {tx.recipient_phone && (
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="w-full gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                  >
+                    <a href={generateWhatsAppLink()} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="w-4 h-4" />
+                      Send WhatsApp Notification
+                    </a>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
