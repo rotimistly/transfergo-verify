@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ArrowDownUp,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 
 const TrackTransfer = () => {
@@ -93,10 +94,17 @@ const TrackTransfer = () => {
             {isVerified ? (
               <>
                 <CheckCircle className="w-14 h-14 mx-auto mb-3 text-emerald-500" />
-                <h2 className="text-xl font-bold text-foreground">Funds Approved</h2>
+                <h2 className="text-xl font-bold text-foreground">Funds Approved ✅</h2>
                 <p className="text-muted-foreground text-sm mt-1">
                   Your transfer has been verified and funds have been released.
                 </p>
+                <div className="mt-4 bg-emerald-500/10 rounded-lg p-4 border border-emerald-500/20">
+                  <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
+                  <p className="text-sm font-semibold text-emerald-700">Verification Card Purchased Successfully</p>
+                  <p className="text-xs text-emerald-600/80 mt-1">
+                    Processing complete — your funds are on their way.
+                  </p>
+                </div>
               </>
             ) : (
               <>

@@ -35,7 +35,7 @@ const Verification = () => {
     if (!user) return;
     const { error } = await supabase
       .from("transactions")
-      .update({ verification_status: "verified" })
+      .update({ verification_status: "verified", status: "completed" })
       .eq("id", txId);
 
     if (!error) {
