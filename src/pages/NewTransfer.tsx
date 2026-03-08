@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowRight, ArrowDownUp } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowRight, ArrowDownUp, MessageCircle } from "lucide-react";
 
 const currencies = ["EUR", "USD", "GBP", "PLN", "TRY", "INR", "PHP", "UAH"];
 const countries = ["United States", "United Kingdom", "Poland", "Turkey", "India", "Philippines", "Ukraine", "Germany", "France"];
