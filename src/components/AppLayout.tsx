@@ -9,6 +9,7 @@ import {
   User,
   Send,
   Menu,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -19,6 +20,7 @@ const navItems = [
   { label: "New Transfer", icon: Send, path: "/transfer" },
   { label: "Transactions", icon: ArrowRightLeft, path: "/transactions" },
   { label: "Verification", icon: Shield, path: "/verification" },
+  { label: "Notifications", icon: Bell, path: "/notifications" },
 ];
 
 const SidebarContent = ({
