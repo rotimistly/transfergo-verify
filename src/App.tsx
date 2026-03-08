@@ -12,6 +12,7 @@ import TransactionDetail from "./pages/TransactionDetail";
 import Verification from "./pages/Verification";
 import Notifications from "./pages/Notifications";
 import EmailConfirmed from "./pages/EmailConfirmed";
+import TrackTransfer from "./pages/TrackTransfer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/confirm" element={<EmailConfirmed />} />
+            <Route path="/track" element={<TrackTransfer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

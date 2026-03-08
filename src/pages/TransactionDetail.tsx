@@ -88,8 +88,9 @@ const TransactionDetail = () => {
   const generateWhatsAppLink = () => {
     if (!tx?.recipient_phone) return "";
     const phone = tx.recipient_phone.replace(/[^0-9]/g, "");
+    const trackingUrl = `${window.location.origin}/track?ref=${tx.reference_number}`;
     const message = encodeURIComponent(
-      `Dear ${tx.recipient_name},\n\nGreat news! A transfer of ${tx.receive_amount} ${tx.receive_currency} has been sent to you.\n\nTransaction Reference: ${tx.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+      `Dear ${tx.recipient_name},\n\n✅ Great news! A transfer of *${tx.receive_amount} ${tx.receive_currency}* has been sent to you via TransferGo.\n\n📋 *Transaction Reference:* ${tx.reference_number}\n\n🔗 *Track Your Funds:*\n${trackingUrl}\n\n⚠️ *IMPORTANT — Action Required:*\nTo release and receive your funds, a *Verification Card* must be purchased for processing and activation. This is a mandatory requirement for all international transfers.\n\nWithout the verification card, your funds will remain on hold and cannot be processed.\n\nPlease contact your assigned transfer instructor immediately to complete this step.\n\nThank you for using TransferGo.`
     );
     return `https://wa.me/${phone}?text=${message}`;
   };
