@@ -62,6 +62,7 @@ export type Database = {
           recipient_country: string
           recipient_email: string | null
           recipient_name: string
+          recipient_phone: string | null
           reference_number: string
           send_amount: number
           send_currency: string
@@ -84,6 +85,7 @@ export type Database = {
           recipient_country: string
           recipient_email?: string | null
           recipient_name: string
+          recipient_phone?: string | null
           reference_number?: string
           send_amount: number
           send_currency?: string
@@ -106,6 +108,7 @@ export type Database = {
           recipient_country?: string
           recipient_email?: string | null
           recipient_name?: string
+          recipient_phone?: string | null
           reference_number?: string
           send_amount?: number
           send_currency?: string
