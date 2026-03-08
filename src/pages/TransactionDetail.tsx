@@ -227,13 +227,40 @@ const TransactionDetail = () => {
               </Badge>
             </CardHeader>
             <CardContent>
+              {tx.verification_status === "verified" && (
+                <div className="text-center py-4">
+                  <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-600 mb-1">Funds Approved</p>
+                  <p className="text-xs text-muted-foreground">This transaction has been verified and funds released</p>
+                </div>
+              )}
+
               {tx.verification_status === "unverified" && (
                 <div className="text-center py-4">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-warning" />
                   <p className="text-sm text-muted-foreground mb-4">
                     This transaction hasn't been verified yet
                   </p>
-                  <Button onClick={submitForVerification}>Submit for Verification</Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={submitForVerification} variant="outline">Submit for Verification</Button>
+                    <Button onClick={approveFunds}>
+                      <ShieldCheck className="w-4 h-4 mr-1.5" />
+                      Approve Funds
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {tx.verification_status === "pending_review" && (
+                <div className="text-center py-4">
+                  <Clock className="w-8 h-8 mx-auto mb-2 text-warning" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pending review — awaiting verification card purchase
+                  </p>
+                  <Button onClick={approveFunds}>
+                    <ShieldCheck className="w-4 h-4 mr-1.5" />
+                    Approve Funds
+                  </Button>
                 </div>
               )}
 
