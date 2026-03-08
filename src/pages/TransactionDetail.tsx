@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowUpRight, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Clock, CheckCircle, XCircle, AlertTriangle, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
@@ -61,6 +61,37 @@ const TransactionDetail = () => {
       setTx({ ...tx, verification_status: "pending_review" });
       toast.success("Submitted for verification");
     }
+  };
+
+  const approveFunds = async () => {
+    if (!tx || !user) return;
+    const { error } = await supabase
+      .from("transactions")
+      .update({ verification_status: "verified", status: "completed" })
+      .eq("id", tx.id);
+
+    if (error) {
+      toast.error("Failed to approve funds");
+      return;
+    }
+
+    await supabase.from("verification_logs").insert({
+      transaction_id: tx.id,
+      user_id: user.id,
+      action: "approved",
+      notes: "Funds approved from transaction detail",
+    });
+    setTx({ ...tx, verification_status: "verified", status: "completed" });
+    toast.success("Funds approved successfully!");
+  };
+
+  const generateWhatsAppLink = () => {
+    if (!tx?.recipient_phone) return "";
+    const phone = tx.recipient_phone.replace(/[^0-9]/g, "");
+    const message = encodeURIComponent(
+      `Dear ${tx.recipient_name},\n\nGreat news! A transfer of ${tx.receive_amount} ${tx.receive_currency} has been sent to you.\n\nTransaction Reference: ${tx.reference_number}\n\nTo receive your funds, please follow your assigned instructor's guidance. A verification card must be purchased for approval and processing.\n\nThank you for using TransferGo.`
+    );
+    return `https://wa.me/${phone}?text=${message}`;
   };
 
   if (!tx) {
@@ -139,6 +170,15 @@ const TransactionDetail = () => {
                   <span className="font-medium">{tx.recipient_email}</span>
                 </div>
               )}
+              {tx.recipient_phone && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="font-medium flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5" />
+                    {tx.recipient_phone}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Country</span>
                 <span className="font-medium">{tx.recipient_country}</span>
@@ -147,6 +187,23 @@ const TransactionDetail = () => {
                 <span className="text-muted-foreground">Payment Method</span>
                 <span className="font-medium capitalize">{tx.payment_method.replace("_", " ")}</span>
               </div>
+
+              {/* WhatsApp resend */}
+              {tx.recipient_phone && (
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="w-full gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                  >
+                    <a href={generateWhatsAppLink()} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="w-4 h-4" />
+                      Send WhatsApp Notification
+                    </a>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -170,13 +227,40 @@ const TransactionDetail = () => {
               </Badge>
             </CardHeader>
             <CardContent>
+              {tx.verification_status === "verified" && (
+                <div className="text-center py-4">
+                  <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-600 mb-1">Funds Approved</p>
+                  <p className="text-xs text-muted-foreground">This transaction has been verified and funds released</p>
+                </div>
+              )}
+
               {tx.verification_status === "unverified" && (
                 <div className="text-center py-4">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-warning" />
                   <p className="text-sm text-muted-foreground mb-4">
                     This transaction hasn't been verified yet
                   </p>
-                  <Button onClick={submitForVerification}>Submit for Verification</Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={submitForVerification} variant="outline">Submit for Verification</Button>
+                    <Button onClick={approveFunds}>
+                      <ShieldCheck className="w-4 h-4 mr-1.5" />
+                      Approve Funds
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {tx.verification_status === "pending_review" && (
+                <div className="text-center py-4">
+                  <Clock className="w-8 h-8 mx-auto mb-2 text-warning" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pending review — awaiting verification card purchase
+                  </p>
+                  <Button onClick={approveFunds}>
+                    <ShieldCheck className="w-4 h-4 mr-1.5" />
+                    Approve Funds
+                  </Button>
                 </div>
               )}
 
