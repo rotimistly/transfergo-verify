@@ -31,7 +31,7 @@ const NewTransfer = () => {
     notifyMethod: "email" as "email" | "whatsapp" | "both",
   });
 
-  const exchangeRate = rates[form.sendCurrency]?.[form.receiveCurrency] ?? 1;
+  const exchangeRate = getExchangeRate(form.sendCurrency, form.receiveCurrency);
   const sendNum = parseFloat(form.sendAmount) || 0;
   const fee = sendNum > 0 ? Math.max(0.99, sendNum * 0.005) : 0;
   const receiveAmount = sendNum * exchangeRate;
