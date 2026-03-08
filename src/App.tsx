@@ -12,6 +12,7 @@ import TransactionDetail from "./pages/TransactionDetail";
 import Verification from "./pages/Verification";
 import Notifications from "./pages/Notifications";
 import EmailConfirmed from "./pages/EmailConfirmed";
+import TrackTransfer from "./pages/TrackTransfer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
