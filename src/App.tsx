@@ -10,6 +10,7 @@ import NewTransfer from "./pages/NewTransfer";
 import Transactions from "./pages/Transactions";
 import TransactionDetail from "./pages/TransactionDetail";
 import Verification from "./pages/Verification";
+import Notifications from "./pages/Notifications";
 import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 
