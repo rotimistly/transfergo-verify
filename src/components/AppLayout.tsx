@@ -20,6 +20,7 @@ const navItems = [
   { label: "New Transfer", icon: Send, path: "/transfer" },
   { label: "Transactions", icon: ArrowRightLeft, path: "/transactions" },
   { label: "Verification", icon: Shield, path: "/verification" },
+  { label: "Notifications", icon: Bell, path: "/notifications" },
 ];
 
 const SidebarContent = ({
