@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TransferToAccountSection from "@/components/TransferToAccountSection";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,6 +198,9 @@ const TrackTransfer = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Transfer to Personal Account */}
+        <TransferToAccountSection />
 
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground pb-8 pt-2">
