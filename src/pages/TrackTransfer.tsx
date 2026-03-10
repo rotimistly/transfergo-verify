@@ -198,6 +198,9 @@ const TrackTransfer = () => {
           </Card>
         )}
 
+        {/* Transfer to Personal Account */}
+        <TransferToAccountSection />
+
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground pb-8 pt-2">
           <p>TransferGo — Secure International Money Transfers</p>
