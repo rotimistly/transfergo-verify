@@ -1,7 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
@@ -17,34 +16,51 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+const clearLocalAuthData = () => {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {}
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasCleared = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        clearTimeout(timeout);
 
         if (!isMounted) return;
 
         if (error) {
-          console.error("Session restore failed:", error.message);
-
-          if (error.message?.toLowerCase().includes("fetch")) {
-            await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-          }
-
+          console.warn("Session restore failed, clearing stale data:", error.message);
+          clearLocalAuthData();
+          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
           setSession(null);
         } else {
-          setSession(session);
+          setSession(currentSession);
         }
-      } catch (error) {
-        console.error("Auth initialization failed:", error);
-        if (isMounted) {
-          await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      } catch (err: any) {
+        console.warn("Auth init error, clearing stale session:", err?.message);
+        if (isMounted && !hasCleared.current) {
+          hasCleared.current = true;
+          clearLocalAuthData();
+          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
           setSession(null);
         }
       } finally {
@@ -52,9 +68,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!isMounted) return;
-      setSession(session);
+
+      if (event === "TOKEN_REFRESHED" && !newSession) {
+        clearLocalAuthData();
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      setSession(newSession);
       setLoading(false);
     });
 
@@ -67,7 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    clearLocalAuthData();
+    await supabase.auth.signOut().catch(() => {});
   };
 
   return (
