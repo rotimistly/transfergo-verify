@@ -27,23 +27,32 @@ const Dashboard = () => {
     if (!user) return;
 
     const fetchData = async () => {
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      try {
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
 
-      if (data) {
-        setTransactions(data);
-        const all = await supabase.from("transactions").select("*").eq("user_id", user.id);
-        const allData = all.data ?? [];
-        setStats({
-          total: allData.length,
-          completed: allData.filter((t) => t.status === "completed").length,
-          pending: allData.filter((t) => t.status === "pending" || t.status === "processing").length,
-          totalVolume: allData.reduce((sum, t) => sum + Number(t.total_amount), 0),
-        });
+        if (error) {
+          console.error("Failed to fetch transactions:", error.message);
+          return;
+        }
+
+        if (data) {
+          setTransactions(data);
+          const all = await supabase.from("transactions").select("*").eq("user_id", user.id);
+          const allData = all.data ?? [];
+          setStats({
+            total: allData.length,
+            completed: allData.filter((t) => t.status === "completed").length,
+            pending: allData.filter((t) => t.status === "pending" || t.status === "processing").length,
+            totalVolume: allData.reduce((sum, t) => sum + Number(t.total_amount), 0),
+          });
+        }
+      } catch (err) {
+        console.error("Network error fetching data:", err);
       }
     };
 
