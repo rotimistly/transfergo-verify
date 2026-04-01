@@ -39,10 +39,7 @@ const Auth = () => {
         toast.success("Account created! Check your email to confirm.");
       }
     } catch (error: any) {
-      const errorMessage = error?.message?.toLowerCase().includes("failed to fetch")
-        ? "Connection issue detected. If this happens in preview, test the published URL."
-        : error?.message || "Authentication failed. Please try again.";
-      toast.error(errorMessage);
+      toast.error(error?.message || "Authentication failed. Please try again.");
     } finally {
       setLoading(false);
     }
