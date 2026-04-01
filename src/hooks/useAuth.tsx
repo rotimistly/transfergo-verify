@@ -22,27 +22,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session first, then listen for changes
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error("Session restore failed:", error.message);
-        // Clear stale session on token refresh failure
-        if (error.message?.includes("fetch") || error.message?.includes("token")) {
-          supabase.auth.signOut();
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (error) {
+          console.error("Session restore failed:", error.message);
+
+          if (error.message?.toLowerCase().includes("fetch")) {
+            await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+          }
+
+          setSession(null);
+        } else {
+          setSession(session);
         }
+      } catch (error) {
+        console.error("Auth initialization failed:", error);
+        if (isMounted) {
+          await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+          setSession(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
       setSession(session);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setLoading(false);
-      }
-    );
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
