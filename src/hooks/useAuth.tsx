@@ -22,17 +22,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Restore session first, then listen for changes
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Session restore failed:", error.message);
+        // Clear stale session on token refresh failure
+        if (error.message?.includes("fetch") || error.message?.includes("token")) {
+          supabase.auth.signOut();
+        }
+      }
+      setSession(session);
+      setLoading(false);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
         setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
