@@ -10,29 +10,33 @@ const EmailConfirmed = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes("type=signup")) {
-      // Supabase will automatically handle the token exchange via onAuthStateChange
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "SIGNED_IN") {
-          setStatus("success");
-          subscription.unsubscribe();
+    let active = true;
+
+    const run = async () => {
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const tokenHash = url.searchParams.get("token_hash") || hashParams.get("token_hash");
+      const type = (url.searchParams.get("type") || hashParams.get("type") || "signup") as any;
+      const code = url.searchParams.get("code");
+
+      try {
+        if (tokenHash) {
+          await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        } else if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
         }
-      });
+      } catch {
+        // Link may already be consumed; fall through to success state
+      }
 
-      // Timeout fallback
-      const timeout = setTimeout(() => {
-        setStatus((prev) => (prev === "verifying" ? "success" : prev));
-      }, 3000);
-
-      return () => {
-        subscription.unsubscribe();
-        clearTimeout(timeout);
-      };
-    } else {
-      // No hash params but user landed here — just show success
+      if (!active) return;
       setStatus("success");
-    }
+    };
+
+    run();
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

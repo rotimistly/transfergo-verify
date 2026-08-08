@@ -20,15 +20,17 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
         toast.success("Welcome back!");
         navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
           options: {
             data: { full_name: fullName },
@@ -36,10 +38,32 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Account created! Check your email to confirm.");
+
+        if (data.session) {
+          toast.success("Account created!");
+          navigate("/dashboard");
+          return;
+        }
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (signInError) {
+          toast.error("This email is already registered. Please sign in instead.");
+          setIsLogin(true);
+        } else {
+          toast.success("Account created!");
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
-      toast.error(error?.message || "Authentication failed. Please try again.");
+      const msg = error?.message || "Authentication failed. Please try again.";
+      toast.error(
+        msg.toLowerCase().includes("invalid login credentials")
+          ? "Incorrect email or password."
+          : msg
+      );
     } finally {
       setLoading(false);
     }
