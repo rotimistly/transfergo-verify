@@ -1,0 +1,3 @@
+- [ ] Replace payment/code gates with neutral, accurate transfer-status guidance and stop collecting bank details on public tracking.
+- [ ] Use each running app's origin and its actual transaction reference in recipient tracking links; do not use the unverified supplied host.
+- [ ] Verify generated links and review preview diagnostics.
