@@ -1,0 +1,1 @@
+Centralize recipient-facing tracking-link construction and transfer notices in `src/lib/transfer-notifications.ts` so all channels use the active app origin and consistent, accurate status language.

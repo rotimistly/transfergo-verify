@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ArrowUpRight, Clock, CheckCircle, XCircle, AlertTriangle, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { buildRecipientTransferNotice, buildTrackingUrl } from "@/lib/transfer-notifications";
 
 type Transaction = Tables<"transactions">;
 type VerificationLog = Tables<"verification_logs">;
@@ -88,10 +89,16 @@ const TransactionDetail = () => {
   const generateWhatsAppLink = () => {
     if (!tx?.recipient_phone) return "";
     const phone = tx.recipient_phone.replace(/[^0-9]/g, "");
-    const trackingUrl = `${window.location.origin}/track?ref=${tx.reference_number}`;
-    const message = encodeURIComponent(
-      `Dear ${tx.recipient_name},\n\n✅ Great news! A transfer of *${tx.receive_amount} ${tx.receive_currency}* has been sent to you via TransferGo.\n\n📋 *Transaction Reference:* ${tx.reference_number}\n\n🔗 *Track Your Funds:*\n${trackingUrl}\n\n⚠️ *IMPORTANT — Action Required:*\nTo release and receive your funds, a *Verification Card* must be purchased for processing and activation. This is a mandatory requirement for all international transfers.\n\nWithout the verification card, your funds will remain on hold and cannot be processed.\n\nPlease contact your assigned transfer instructor immediately to complete this step.\n\nThank you for using TransferGo.`
-    );
+    const trackingUrl = buildTrackingUrl(window.location.origin, tx.reference_number);
+    const message = encodeURIComponent(buildRecipientTransferNotice({
+      recipientName: tx.recipient_name,
+      senderName: tx.sender_name,
+      amount: tx.receive_amount,
+      currency: tx.receive_currency,
+      reference: tx.reference_number,
+      status: tx.status,
+      origin: window.location.origin,
+    }));
     return `https://wa.me/${phone}?text=${message}`;
   };
 
@@ -231,8 +238,8 @@ const TransactionDetail = () => {
               {tx.verification_status === "verified" && (
                 <div className="text-center py-4">
                   <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-600 mb-1">Funds Approved</p>
-                  <p className="text-xs text-muted-foreground">This transaction has been verified and funds released</p>
+                  <p className="text-sm font-medium text-emerald-600 mb-1">Transaction marked verified</p>
+                  <p className="text-xs text-muted-foreground">This status does not confirm that funds arrived in the recipient’s account.</p>
                 </div>
               )}
 
@@ -256,7 +263,7 @@ const TransactionDetail = () => {
                 <div className="text-center py-4">
                   <Clock className="w-8 h-8 mx-auto mb-2 text-warning" />
                   <p className="text-sm text-muted-foreground mb-4">
-                    Pending review — awaiting verification card purchase
+                    Pending review — check the transfer record and confirm receipt independently.
                   </p>
                   <Button onClick={approveFunds}>
                     <ShieldCheck className="w-4 h-4 mr-1.5" />
