@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { buildRecipientTransferNotice, buildTrackingUrl } from "@/lib/transfer-notifications";
 
 interface NotificationWithTx {
   id: string;
@@ -174,7 +175,7 @@ const Notifications = () => {
 
     await supabase.from("verification_logs").insert({
       transaction_id: notif.transaction_id,
-      user_id: user!.id,
+    user_id: user?.id ?? "",
       action: "approved",
       notes: "Funds approved from notifications panel",
     });
@@ -193,10 +194,16 @@ const Notifications = () => {
     const phone = notif.recipient_phone?.replace(/[^0-9]/g, "") || "";
     const amount = notif.receive_amount || notif.amount;
     const currency = notif.receive_currency || notif.currency;
-    const trackingUrl = `${window.location.origin}/track?ref=${notif.tx_reference}`;
-    const message = encodeURIComponent(
-      `Dear ${notif.recipient_name},\n\n✅ Great news! A transfer of *${amount} ${currency}* has been sent to you via TransferGo.\n\n📋 *Transaction Reference:* ${notif.tx_reference}\n\n🔗 *Track Your Funds:*\n${trackingUrl}\n\n⚠️ *IMPORTANT — Action Required:*\nTo release and receive your funds, a *Verification Card* must be purchased for processing and activation. This is a mandatory requirement for all international transfers.\n\nWithout the verification card, your funds will remain on hold and cannot be processed.\n\nPlease contact your assigned transfer instructor immediately to complete this step.\n\nThank you for using TransferGo.`
-    );
+    const trackingUrl = buildTrackingUrl(window.location.origin, notif.tx_reference);
+    const message = encodeURIComponent(buildRecipientTransferNotice({
+      recipientName: notif.recipient_name,
+      senderName: notif.sender_name,
+      amount,
+      currency,
+      reference: notif.tx_reference,
+      status: notif.tx_status || "pending",
+      origin: window.location.origin,
+    }));
     return `https://wa.me/${phone}?text=${message}`;
   };
 

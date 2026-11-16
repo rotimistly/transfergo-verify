@@ -6,13 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  Shield,
+  Activity,
   Clock,
   CheckCircle,
   AlertTriangle,
   ArrowDownUp,
-  CreditCard,
-  ShieldCheck,
 } from "lucide-react";
 
 const TrackTransfer = () => {
@@ -71,7 +69,7 @@ const TrackTransfer = () => {
   }
 
   const isVerified = tx.verification_status === "verified";
-  const isPending = tx.verification_status === "pending_review";
+  const statusLabel = String(tx.status || "pending").replaceAll("_", " ");
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,40 +77,33 @@ const TrackTransfer = () => {
       <div className="bg-primary text-primary-foreground py-6 px-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-            <Shield className="w-5 h-5" />
+            <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-bold">TransferGo</h1>
-            <p className="text-sm opacity-80">Track Your Transfer</p>
+            <h1 className="text-lg font-bold">Transfer Status</h1>
+            <p className="text-sm opacity-80">Reference-based transaction record</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-5 mt-4">
         {/* Status Banner */}
-        <Card className={`border-2 ${isVerified ? "border-emerald-500/40" : "border-primary/30"}`}>
+        <Card className={`border-2 ${isVerified ? "border-success/40" : "border-primary/30"}`}>
           <CardContent className="py-6 text-center">
             {isVerified ? (
               <>
-                <CheckCircle className="w-14 h-14 mx-auto mb-3 text-emerald-500" />
-                <h2 className="text-xl font-bold text-foreground">Funds Approved ✅</h2>
+                <CheckCircle className="w-14 h-14 mx-auto mb-3 text-success" />
+                <h2 className="text-xl font-bold text-foreground">Transaction marked verified</h2>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Your transfer has been verified and funds have been released.
+                  This is the status recorded in the app; check with your bank or payout provider to confirm receipt.
                 </p>
-                <div className="mt-4 bg-emerald-500/10 rounded-lg p-4 border border-emerald-500/20">
-                  <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-700">Verification Card Purchased Successfully</p>
-                  <p className="text-xs text-emerald-600/80 mt-1">
-                    Processing complete — your funds are on their way.
-                  </p>
-                </div>
               </>
             ) : (
               <>
                 <Clock className="w-14 h-14 mx-auto mb-3 text-primary" />
-                <h2 className="text-xl font-bold text-foreground">Transfer Pending</h2>
+                <h2 className="text-xl font-bold text-foreground">Transfer status: {statusLabel}</h2>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Your funds are being held and require verification to be released.
+                  This page shows the status recorded in the app. Contact your bank or payout provider through its official channel to verify receipt.
                 </p>
               </>
             )}
@@ -165,47 +156,13 @@ const TrackTransfer = () => {
           </CardContent>
         </Card>
 
-        {/* Verification Card Notice — only when NOT yet verified */}
-        {!isVerified && (
-          <Card className="border-2 border-destructive/30 bg-destructive/5">
-            <CardContent className="py-6">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                  <CreditCard className="w-6 h-6 text-destructive" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-foreground mb-2 text-base">
-                    ⚠️ Action Required — Verification Card
-                  </h3>
-                  <p className="text-sm text-foreground/80 leading-relaxed mb-3">
-                    To release and receive your funds, a <span className="font-bold">Verification Card</span> must be purchased for processing and activation. This is a <span className="font-bold text-destructive">mandatory requirement</span> for all international transfers.
-                  </p>
-                  <div className="bg-background rounded-lg p-3 space-y-2 text-sm">
-                    <p className="font-semibold text-foreground">How it works:</p>
-                    <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground">
-                      <li>Contact your assigned transfer instructor</li>
-                      <li>Purchase the required Verification Card</li>
-                      <li>Provide the card details for processing</li>
-                      <li>Funds will be released within 24 hours of verification</li>
-                    </ol>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Without the verification card, funds cannot be processed and will remain on hold.
-                    Please complete this step as soon as possible to avoid delays.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Transfer to Personal Account */}
+        {/* Neutral receipt guidance */}
         <TransferToAccountSection />
 
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground pb-8 pt-2">
-          <p>TransferGo — Secure International Money Transfers</p>
-          <p className="mt-1">For support, contact your assigned transfer instructor</p>
+          <p>Transaction status record</p>
+          <p className="mt-1">Verify receipt directly with your bank or payout provider.</p>
         </div>
       </div>
     </div>

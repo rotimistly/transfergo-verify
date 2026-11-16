@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowRight, ArrowDownUp, MessageCircle } from "lucide-react";
 
 import { currencies, countries, getExchangeRate } from "@/lib/constants";
+import { buildRecipientTransferNotice, buildTrackingUrl } from "@/lib/transfer-notifications";
 
 const NewTransfer = () => {
   const { user } = useAuth();
@@ -76,10 +77,16 @@ const NewTransfer = () => {
       // Generate WhatsApp link if phone provided
       if (form.recipientPhone && (form.notifyMethod === "whatsapp" || form.notifyMethod === "both")) {
         const phone = form.recipientPhone.replace(/[^0-9]/g, "");
-        const trackingUrl = `${window.location.origin}/track?ref=${data.reference_number}`;
-        const message = encodeURIComponent(
-          `Dear ${form.recipientName},\n\n✅ Great news! A transfer of *${receiveAmount.toFixed(2)} ${form.receiveCurrency}* has been sent to you via TransferGo.\n\n📋 *Transaction Reference:* ${data.reference_number}\n\n🔗 *Track Your Funds:*\n${trackingUrl}\n\n⚠️ *IMPORTANT — Action Required:*\nTo release and receive your funds, a *Verification Card* must be purchased for processing and activation. This is a mandatory requirement for all international transfers.\n\nWithout the verification card, your funds will remain on hold and cannot be processed.\n\nPlease contact your assigned transfer instructor immediately to complete this step.\n\nThank you for using TransferGo.`
-        );
+        const trackingUrl = buildTrackingUrl(window.location.origin, data.reference_number);
+        const message = encodeURIComponent(buildRecipientTransferNotice({
+          recipientName: form.recipientName,
+          senderName: user.user_metadata?.full_name || user.email || "Sender",
+          amount: receiveAmount.toFixed(2),
+          currency: form.receiveCurrency,
+          reference: data.reference_number,
+          status: data.status || "pending",
+          origin: window.location.origin,
+        }));
         const link = `https://wa.me/${phone}?text=${message}`;
         setWhatsappLink(link);
       }
