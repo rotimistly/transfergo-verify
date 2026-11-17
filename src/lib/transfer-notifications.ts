@@ -30,7 +30,7 @@ export const buildRecipientTransferNotice = ({
     "",
     `Transfer update: a request for ${amount} ${currency} was recorded from ${senderName}.`,
     `Reference: ${reference}`,
-    `Recorded status: ${status.replaceAll("_", " ")}`,
+    `Recorded status: ${status.replace(/_/g, " ")}`,
     "",
     `View the transaction record: ${trackingUrl}`,
     "",
