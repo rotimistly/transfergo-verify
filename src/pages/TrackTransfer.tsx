@@ -69,7 +69,7 @@ const TrackTransfer = () => {
   }
 
   const isVerified = tx.verification_status === "verified";
-  const statusLabel = String(tx.status || "pending").replaceAll("_", " ");
+  const statusLabel = String(tx.status || "pending").replace(/_/g, " ");
 
   return (
     <div className="min-h-screen bg-background">
