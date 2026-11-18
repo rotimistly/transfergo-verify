@@ -67,7 +67,19 @@ const NewTransfer = () => {
       if (form.recipientEmail && (form.notifyMethod === "email" || form.notifyMethod === "both")) {
         try {
           await supabase.functions.invoke("send-transfer-notification", {
-            body: { transactionId: data.id },
+            body: {
+              transactionId: data.id,
+              notice: buildRecipientTransferNotice({
+                recipientName: form.recipientName,
+                senderName: user.user_metadata?.full_name || user.email || "Sender",
+                amount: receiveAmount.toFixed(2),
+                currency: form.receiveCurrency,
+                reference: data.reference_number,
+                status: data.status || "pending",
+                origin: window.location.origin,
+              }),
+              trackingUrl: buildTrackingUrl(window.location.origin, data.reference_number),
+            },
           });
         } catch (notifErr) {
           console.error("Notification error:", notifErr);

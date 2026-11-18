@@ -8,8 +8,29 @@ export interface RecipientTransferNotice {
   origin: string;
 }
 
+const PUBLISHED_APP_ORIGIN = "https://transfergo-verify.vercel.app";
+
+export const getTrackingOrigin = (origin: string): string => {
+  try {
+    const parsedOrigin = new URL(origin);
+    const hostname = parsedOrigin.hostname.toLowerCase();
+
+    if (
+      (parsedOrigin.protocol === "http:" && ["localhost", "127.0.0.1"].includes(hostname)) ||
+      (parsedOrigin.protocol === "https:" && hostname === "transfergo-verify.vercel.app")
+    ) {
+      return parsedOrigin.origin;
+    }
+
+    // Preview and unknown hosts use the production Vercel tracking page.
+    return PUBLISHED_APP_ORIGIN;
+  } catch {
+    return PUBLISHED_APP_ORIGIN;
+  }
+};
+
 export const buildTrackingUrl = (origin: string, reference: string): string => {
-  const url = new URL("/track", origin);
+  const url = new URL("/track", getTrackingOrigin(origin));
   url.searchParams.set("ref", reference);
   return url.toString();
 };

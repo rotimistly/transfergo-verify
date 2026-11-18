@@ -1,153 +1,108 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+const vercelOrigin = "https://transfergo-verify.vercel.app";
+
+const respond = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (character) => {
+  const entities: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return entities[character] ?? character;
+});
+
+const resolveTrackingOrigin = (requestOrigin: string | null) => {
+  if (!requestOrigin) return publishedOrigin;
+  try {
+    const parsed = new URL(requestOrigin);
+    if (parsed.origin === vercelOrigin) return vercelOrigin;
+  } catch {
+    return vercelOrigin;
+  }
+  return vercelOrigin;
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return respond({ error: "Method not allowed" }, 405);
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    if (!supabaseUrl || !serviceRoleKey) return respond({ error: "Service unavailable" }, 503);
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const token = authHeader?.match(/^Bearer\s+(.+)$/i)?.[1];
+    if (!token) return respond({ error: "Unauthorized" }, 401);
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData.user) return respond({ error: "Unauthorized" }, 401);
+
+    const body = await req.json().catch(() => null);
+    const transactionId = body?.transactionId;
+    if (typeof transactionId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(transactionId)) {
+      return respond({ error: "A valid transactionId is required" }, 400);
     }
 
-    const { transactionId } = await req.json();
-
-    if (!transactionId) {
-      return new Response(
-        JSON.stringify({ error: "transactionId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch transaction details
     const { data: tx, error: txError } = await supabase
       .from("transactions")
-      .select("*")
+      .select("id, user_id, reference_number, recipient_name, recipient_email, sender_name, receive_amount, receive_currency, status")
       .eq("id", transactionId)
-      .single();
+      .eq("user_id", authData.user.id)
+      .maybeSingle();
 
-    if (txError || !tx) {
-      return new Response(
-        JSON.stringify({ error: "Transaction not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (txError) return respond({ error: "Unable to load transaction" }, 500);
+    if (!tx) return respond({ error: "Transaction not found" }, 404);
 
-    const notificationMessage = `Dear ${tx.recipient_name},
-
-Great news! A transfer of ${tx.receive_amount} ${tx.receive_currency} has been successfully sent to you by ${tx.sender_name}.
-
-Transaction Reference: ${tx.reference_number}
-
-To withdraw or receive your funds:
-• If you wish to receive the funds directly into your bank account or as a cash deposit, please follow your assigned instructor's guidance.
-• A verification card must be purchased for approval and processing of the funds to your account or cash deposit location.
-• Without completing the card verification process, the funds cannot be released.
-
-Please contact your instructor for further details on completing this process.
-
-Thank you for using TransferGo.
-
-Best regards,
-TransferGo Team`;
+    const requestBody = body as { transactionId: string; notice?: unknown; trackingUrl?: unknown };
+    const origin = resolveTrackingOrigin(req.headers.get("origin"));
+    const trackingUrl = new URL("/track", origin);
+    trackingUrl.searchParams.set("ref", tx.reference_number);
+    const submittedTrackingUrl = typeof requestBody.trackingUrl === "string" ? new URL(requestBody.trackingUrl) : null;
+    const safeTrackingUrl = submittedTrackingUrl?.origin === origin && submittedTrackingUrl.pathname === "/track" && submittedTrackingUrl.searchParams.get("ref") === tx.reference_number
+      ? submittedTrackingUrl
+      : trackingUrl;
+    const notificationMessage = typeof requestBody.notice === "string" && requestBody.notice.length <= 4000
+      ? requestBody.notice
+      : `Transfer update: a request for ${tx.receive_amount} ${tx.receive_currency} was recorded from ${tx.sender_name}.\nReference: ${tx.reference_number}\nRecorded status: ${String(tx.status || "pending").replace(/_/g, " ")}\n\nView the transaction record: ${safeTrackingUrl.toString()}\n\nThis notice does not confirm that funds have arrived. Check directly with your bank or payout provider. Never pay a fee to release a transfer or share passwords, card details, or one-time sign-in codes.`;
 
     let emailSent = false;
-
-    // Send real email via Resend if recipient has an email
     if (tx.recipient_email && resendApiKey) {
+      const safeUrl = escapeHtml(safeTrackingUrl.toString());
+      const safeMessage = escapeHtml(notificationMessage).replace(/\n/g, "<br>");
+      const emailHtml = `<!doctype html><html><body style="margin:0;padding:24px;background:#f5f8f7;font-family:Arial,sans-serif;color:#163a35"><main style="max-width:560px;margin:0 auto;background:#fff;padding:28px;border:1px solid #dce8e5"><h1 style="font-size:22px">Transfer status update</h1><p>${safeMessage}</p><p><a href="${safeUrl}" style="display:inline-block;padding:12px 18px;background:#087f70;color:#fff;text-decoration:none">View transaction record</a></p></main></body></html>`;
+
       try {
-        const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background-color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
-    <div style="text-align:center;margin-bottom:32px;">
-      <div style="display:inline-block;background:#0d9488;color:#fff;font-weight:bold;font-size:20px;padding:10px 20px;border-radius:10px;">TransferGo</div>
-    </div>
-    <div style="background:#f8fafa;border-radius:12px;padding:32px;border:1px solid #e2e8f0;">
-      <h1 style="color:#0f172a;font-size:22px;margin:0 0 8px;">You've received money! 💰</h1>
-      <p style="color:#64748b;font-size:14px;margin:0 0 24px;">A transfer has been sent to you</p>
-      
-      <div style="background:#ffffff;border-radius:10px;padding:24px;border:1px solid #e2e8f0;margin-bottom:24px;">
-        <div style="text-align:center;">
-          <p style="color:#64748b;font-size:13px;margin:0 0 4px;">Amount Received</p>
-          <p style="color:#0d9488;font-size:36px;font-weight:bold;margin:0;">${tx.receive_amount} ${tx.receive_currency}</p>
-          <p style="color:#64748b;font-size:13px;margin:8px 0 0;">From: <strong style="color:#0f172a;">${tx.sender_name}</strong></p>
-        </div>
-      </div>
-
-      <div style="background:#ffffff;border-radius:10px;padding:20px;border:1px solid #e2e8f0;margin-bottom:24px;">
-        <p style="color:#0f172a;font-size:14px;font-weight:600;margin:0 0 12px;">Transaction Details</p>
-        <table style="width:100%;font-size:13px;">
-          <tr><td style="color:#64748b;padding:4px 0;">Reference</td><td style="color:#0f172a;text-align:right;padding:4px 0;font-weight:500;">${tx.reference_number}</td></tr>
-          <tr><td style="color:#64748b;padding:4px 0;">Recipient</td><td style="color:#0f172a;text-align:right;padding:4px 0;font-weight:500;">${tx.recipient_name}</td></tr>
-          <tr><td style="color:#64748b;padding:4px 0;">Status</td><td style="text-align:right;padding:4px 0;"><span style="background:#dcfce7;color:#16a34a;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:500;">Completed</span></td></tr>
-        </table>
-      </div>
-
-      <div style="background:#fffbeb;border-radius:10px;padding:20px;border:1px solid #fde68a;margin-bottom:24px;">
-        <p style="color:#92400e;font-size:14px;font-weight:600;margin:0 0 10px;">⚠️ Important — How to Receive Your Funds</p>
-        <ul style="color:#92400e;font-size:13px;margin:0;padding-left:18px;line-height:1.8;">
-          <li>To receive funds directly to your bank account or as a cash deposit, follow your assigned instructor's guidance.</li>
-          <li>A <strong>verification card</strong> must be purchased for approval and processing of the funds.</li>
-          <li>Without completing the card verification process, the funds <strong>cannot be released</strong>.</li>
-        </ul>
-        <p style="color:#92400e;font-size:13px;margin:12px 0 0;">Please contact your instructor for further details.</p>
-      </div>
-
-      <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">
-        This email was sent by TransferGo. If you have questions, contact your assigned instructor.
-      </p>
-    </div>
-  </div>
-</body>
-</html>`;
-
-        const resendRes = await fetch("https://api.resend.com/emails", {
+        const emailResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "TransferGo <onboarding@resend.dev>",
+            from: "Transfer record update <onboarding@resend.dev>",
             to: [tx.recipient_email],
-            subject: `You've received ${tx.receive_amount} ${tx.receive_currency} from ${tx.sender_name}`,
+            subject: `Transfer status update — ${tx.reference_number}`,
             html: emailHtml,
             text: notificationMessage,
           }),
         });
-
-        if (resendRes.ok) {
-          emailSent = true;
-          console.log("Email sent successfully to", tx.recipient_email);
-        } else {
-          const errBody = await resendRes.text();
-          console.error(`Resend API error [${resendRes.status}]:`, errBody);
-        }
-      } catch (emailErr) {
-        console.error("Email sending error:", emailErr);
+        emailSent = emailResponse.ok;
+        if (!emailResponse.ok) console.error("Email provider rejected the transfer notice", emailResponse.status);
+      } catch (error) {
+        console.error("Transfer notice email could not be sent", error);
       }
     }
 
-    // Create in-app notification
-    const { error: notifError } = await supabase
+    const { error: notificationError } = await supabase
       .from("transfer_notifications")
       .insert({
         transaction_id: tx.id,
@@ -160,23 +115,10 @@ TransferGo Team`;
         email_sent: emailSent,
       });
 
-    if (notifError) {
-      console.error("Notification insert error:", notifError);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Notification sent successfully",
-        emailSent,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    if (notificationError) return respond({ error: "Unable to create notification" }, 500);
+    return respond({ success: true, emailSent });
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("Transfer notification request failed", error);
+    return respond({ error: "Internal server error" }, 500);
   }
 });

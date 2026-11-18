@@ -3,15 +3,27 @@ import { buildRecipientTransferNotice, buildTrackingUrl } from "@/lib/transfer-n
 
 describe("recipient transfer notices", () => {
   it("builds a tracking link on the app origin with the transaction reference", () => {
-    expect(buildTrackingUrl("https://transfer-wise-trust.lovable.app", "TG-51A81379"))
-      .toBe("https://transfer-wise-trust.lovable.app/track?ref=TG-51A81379");
+    expect(buildTrackingUrl("https://transfergo-verify.vercel.app", "TG-51A81379"))
+      .toBe("https://transfergo-verify.vercel.app/track?ref=TG-51A81379");
   });
 
   it("does not use the unverified transfergo.com host", () => {
     expect(buildTrackingUrl(
       "https://781da02b-b1f2-4480-81ce-7025321212b3.transfergo.com",
       "TG-51A81379",
-    )).toBe("https://transfer-wise-trust.lovable.app/track?ref=TG-51A81379");
+    )).toBe("https://transfergo-verify.vercel.app/track?ref=TG-51A81379");
+  });
+
+  it("uses the Vercel tracking page instead of a Lovable preview host", () => {
+    expect(buildTrackingUrl(
+      "https://id-preview--781da02b-b1f2-4480-81ce-7025321212b3.lovable.app",
+      "TG-51A81379",
+    )).toBe("https://transfergo-verify.vercel.app/track?ref=TG-51A81379");
+  });
+
+  it("keeps tracking links on the configured Vercel app origin", () => {
+    expect(buildTrackingUrl("https://transfergo-verify.vercel.app", "TG-51A81379"))
+      .toBe("https://transfergo-verify.vercel.app/track?ref=TG-51A81379");
   });
 
   it("reports a recorded status without claiming delivery or demanding payment", () => {
